@@ -12,7 +12,8 @@ wav_folders = {
     'violin': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/violin-single-notes",
     'trumpet': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/trumpet-single-notes",
     'flute': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/flute-single-notes",
-    'snare': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/snare-single-notes"
+    'snare': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/snare-single-notes",
+    'generic': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/generic-single-notes"
 }
 
 # Initialize with violin folder
@@ -54,7 +55,8 @@ def load_notes():
 
         color = [int(x) for x in (255 * (i / len(noteslist)), 200, 150)]
         notes[key] = [sample, noteslist[i], (posx, posy), color]
-        notes[key][0].set_volume(0.33)
+        notes[key][0].set_volume(0.50)
+        # notes[key][0].set_volume(0.33)
 
         screen.blit(font.render(notes[key][1], 0, notes[key][3]), (posx, posy))
 
