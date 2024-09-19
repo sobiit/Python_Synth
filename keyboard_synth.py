@@ -1,16 +1,35 @@
 import pygame as pg
 import numpy as np
+# import matplotlib.pyplot as plt
 
 pg.init()
 pg.mixer.init()
 screen = pg.display.set_mode((1280, 720))
 font = pg.font.SysFont("Impact", 48)
 
-def synth(frequency, duration=1.5, sampling_rate=44100):
+def synth(frequency, duration=1.5, sampling_rate=44100): 
+    # original sampling_ rate = 44100
     frames = int(duration*sampling_rate)
-    arr = np.cos(2*np.pi*frequency*np.linspace(0,duration, frames))
-    arr = arr + np.cos(4*np.pi*frequency*np.linspace(0,duration, frames))
-    arr = arr - np.cos(6*np.pi*frequency*np.linspace(0,duration, frames))
+    # original
+    # arr = np.cos(2*np.pi*frequency*np.linspace(0,duration, frames))
+
+    # new
+    # from https://www.tutorialspoint.com/plotting-a-sawtooth-wave-using-matplotlib
+    # Define the parameters of the sawtooth wave
+    amplitude = 1.0  # Amplitude of the wave
+    num_samples = int(sampling_rate * duration)
+    time = np.linspace(0, duration, num_samples)
+
+    # Generate the y-values for the sawtooth wave
+    cycles = frequency * time
+    arr = amplitude * (cycles - np.floor(cycles))
+    arr = arr + (amplitude * (cycles - np.floor(cycles)))
+    arr = arr - (amplitude * (cycles - np.floor(cycles)))
+    # original
+    # arr = arr + np.cos(4*np.pi*frequency*np.linspace(0,duration, frames))
+    # arr = arr - np.cos(6*np.pi*frequency*np.linspace(0,duration, frames))
+
+# don't uncomment
 ##    arr = np.clip(arr*10, -1, 1) # squarish waves
 ##    arr = np.cumsum(np.clip(arr*10, -1, 1)) # triangularish waves pt1
 ##    arr = arr+np.sin(2*np.pi*frequency*np.linspace(0,duration, frames)) # triangularish waves pt1
@@ -29,7 +48,8 @@ noteslist = file_contents.splitlines()
 
 keymod = '0-='
 notes = {} # dict to store samples
-freq = 16.3516 # start frequency
+freq = 16.3516 # start frequency for original
+# freq = 196 # start frequency for violin
 posx, posy = 25, 25 #start position
 
 
