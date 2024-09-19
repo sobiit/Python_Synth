@@ -1,113 +1,106 @@
 import pygame as pg
-import numpy as np
-# import matplotlib.pyplot as plt
+import os
 
 pg.init()
 pg.mixer.init()
+
 screen = pg.display.set_mode((1280, 720))
-font = pg.font.SysFont("Impact", 48)
+font = pg.font.SysFont("Impact", 38)
 
-def synth(frequency, duration=1.5, sampling_rate=44100): 
-    # original sampling_ rate = 44100
-    frames = int(duration*sampling_rate)
-    # original
-    # arr = np.cos(2*np.pi*frequency*np.linspace(0,duration, frames))
+# Define folder paths for different instruments
+wav_folders = {
+    'violin': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/violin-single-notes",
+    'trumpet': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/trumpet-single-notes",
+    'flute': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/flute-single-notes",
+    'snare': "C:/Users/Ysobel Vera/Documents/AllSingleNotes/snare-single-notes"
+}
 
-    # new
-    # from https://www.tutorialspoint.com/plotting-a-sawtooth-wave-using-matplotlib
-    # Define the parameters of the sawtooth wave
-    amplitude = 1.0  # Amplitude of the wave
-    num_samples = int(sampling_rate * duration)
-    time = np.linspace(0, duration, num_samples)
+# Initialize with violin folder
+current_folder = 'violin'
+wav_folder = wav_folders[current_folder]
 
-    # Generate the y-values for the sawtooth wave
-    cycles = frequency * time
-    arr = amplitude * (cycles - np.floor(cycles))
-    arr = arr + (amplitude * (cycles - np.floor(cycles)))
-    arr = arr - (amplitude * (cycles - np.floor(cycles)))
-    # original
-    # arr = arr + np.cos(4*np.pi*frequency*np.linspace(0,duration, frames))
-    # arr = arr - np.cos(6*np.pi*frequency*np.linspace(0,duration, frames))
+keylist = '1234567890qwertyuiopasdfghjklzxcvbnm,.'
 
-# don't uncomment
-##    arr = np.clip(arr*10, -1, 1) # squarish waves
-##    arr = np.cumsum(np.clip(arr*10, -1, 1)) # triangularish waves pt1
-##    arr = arr+np.sin(2*np.pi*frequency*np.linspace(0,duration, frames)) # triangularish waves pt1
-    arr = arr/max(np.abs(arr)) # triangularish waves pt1
-    sound = np.asarray([32767*arr,32767*arr]).T.astype(np.int16)
-    sound = pg.sndarray.make_sound(sound.copy())
-    
-    return sound
+# Function to load notes from the currently selected folder
+def load_notes():
+    global wav_folder
+    notes = {}
+    posx, posy = 25, 25
 
+    # Load the notes list from the text file
+    with open("master-notelist.txt") as notes_file:
+        noteslist = notes_file.read().splitlines()
 
-keylist = '123456789qwertyuioasdfghjklzxcvbnm,.'
-notes_file = open("noteslist.txt")
-file_contents = notes_file.read()
-notes_file.close()
-noteslist = file_contents.splitlines()
+    # Ensure the lists match or handle the mismatch
+    if len(noteslist) > len(keylist):
+        print("Warning: More notes than keys! Truncating notes list.")
+        noteslist = noteslist[:len(keylist)]  # Truncate noteslist to match keylist
 
-keymod = '0-='
-notes = {} # dict to store samples
-freq = 16.3516 # start frequency for original
-# freq = 196 # start frequency for violin
-posx, posy = 25, 25 #start position
+    for i in range(len(noteslist)):
+        if i >= len(keylist):  # Prevent index out of range
+            break
 
+        key = keylist[i]
 
-for i in range(len(noteslist)):
-    mod = int(i/36)
-    key = keylist[i-mod*36]+str(mod) 
-    sample = synth(freq)
-    color = np.array([np.sin(i/25+1.7)*130+125,np.sin(i/30-0.21)*215+40, np.sin(i/25+3.7)*130+125])
-    color = np.clip(color, 0, 255)
-    notes[key] = [sample, noteslist[i], freq, (posx, posy), 255*color/max(color)]
-    notes[key][0].set_volume(0.33)
-    notes[key][0].play()
-    notes[key][0].fadeout(100)
-    freq = freq * 2 ** (1/12)
-    posx = posx + 140
-    if posx > 1220:
-        posx, posy = 25, posy+56
-        
-    screen.blit(font.render(notes[key][1], 0, notes[key][4]), notes[key][3])
+        # Construct the filename for the wav file
+        wav_file = os.path.join(wav_folder, f"{noteslist[i]}.wav")
+
+        if os.path.exists(wav_file):
+            sample = pg.mixer.Sound(wav_file)
+            print(f"Loaded: {wav_file}")  # Debugging print to ensure file is loaded
+        else:
+            print(f"File {wav_file} not found!")  # Debugging message for missing files
+            continue
+
+        color = [int(x) for x in (255 * (i / len(noteslist)), 200, 150)]
+        notes[key] = [sample, noteslist[i], (posx, posy), color]
+        notes[key][0].set_volume(0.33)
+
+        screen.blit(font.render(notes[key][1], 0, notes[key][3]), (posx, posy))
+
+        posx += 140
+        if posx > 1220:
+            posx, posy = 25, posy + 56
+
     pg.display.update()
-    
+    return notes
 
-running = 1
-mod = 1
-pg.display.set_caption("FinFET Synth - Change range: 0 - = // Play with keys: "+keylist )
+# Load initial notes
+notes = load_notes()
 
-keypresses = []
+running = True
+
 while running:
     for event in pg.event.get():
         if event.type == pg.QUIT or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE):
             running = False
         if event.type == pg.KEYDOWN:
             key = str(event.unicode)
-            if key in keymod:
-                mod = keymod.index(str(event.unicode))
-            elif key in keylist:
-                key = key+str(mod)
-                notes[key][0].play()
-                keypresses.append([1, notes[key][1], pg.time.get_ticks()])
-                screen.blit(font.render(notes[key][1], 0, (255,255,255)), notes[key][3])
-        if event.type == pg.KEYUP and str(event.unicode) != '' and str(event.unicode) in keylist:
-            key = str(event.unicode)+str(mod)
-            notes[key][0].fadeout(100)
-            keypresses.append([0, notes[key][1], pg.time.get_ticks()])
-            screen.blit(font.render(notes[key][1], 0, notes[key][4]), notes[key][3])
+            if key in notes:
+                notes[key][0].play()  # Play the sound associated with the key
+                screen.blit(font.render(notes[key][1], 0, (255, 255, 255)), notes[key][2])
+            elif key == '/':  # Press '/' to switch instruments
+                # Switch instrument folder
+                instrument_keys = list(wav_folders.keys())
+                current_index = instrument_keys.index(current_folder)
+                current_folder = instrument_keys[(current_index + 1) % len(instrument_keys)]
+                wav_folder = wav_folders[current_folder]
+                print(f"Switching to {current_folder} notes...")
+
+                # Reload notes from the new folder
+                pg.mixer.stop()  # Stop any currently playing sounds
+                screen.fill((0, 0, 0))  # Clear the screen
+                notes = load_notes()  # Reload notes
+
+        if event.type == pg.KEYUP and str(event.unicode) != '' and str(event.unicode) in notes:
+            key = str(event.unicode)
+            if key in notes:
+                notes[key][0].fadeout(100)
+                screen.blit(font.render(notes[key][1], 0, notes[key][3]), notes[key][2])
 
     pg.display.update()
 
 pg.display.set_caption("Exporting sound sequence")
-if len(keypresses) > 1:
-    for i in range(len(keypresses)-1):
-        keypresses[-i-1][2] = keypresses[-i-1][2] - keypresses[-i-2][2]
-    keypresses[0][2] = 0 # first at zero
 
-    with open("test.txt", "w") as file:
-        for i in range(len(keypresses)):
-            file.write(str(keypresses[i])+'\n') # separate lines for readability
-    file.close()
-    
 pg.mixer.quit()
 pg.quit()
